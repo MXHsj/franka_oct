@@ -75,7 +75,7 @@ class TranslationalScan():
     # ---------- landing ----------
     while not rospy.is_shutdown():
       self.vel_msg.data[2] = 0.125*-0.003*(0.7-self.surf_height_ratio) + (1-0.125)*self.last_vel_msg.data[2]
-      self.vel_msg.data[3] = 0.125*-0.020*self.in_plane_rot_err + (1-0.125)*self.last_vel_msg.data[3]
+      # self.vel_msg.data[3] = 0.125*-0.020*self.in_plane_rot_err + (1-0.125)*self.last_vel_msg.data[3]
       if self.surf_height_ratio >= 0.7 and abs(self.in_plane_rot_err) < 0.08:
         print('start scanning')
         break
@@ -86,7 +86,7 @@ class TranslationalScan():
     while not rospy.is_shutdown():
       self.vel_msg.data[0] = self.lin_vel_x
       self.vel_msg.data[2] = 0.125*-0.003*(0.7-self.surf_height_ratio) + (1-0.125)*self.last_vel_msg.data[2]
-      self.vel_msg.data[3] = 0.125*-0.020*self.in_plane_rot_err + (1-0.125)*self.last_vel_msg.data[3]
+      # self.vel_msg.data[3] = 0.125*-0.020*self.in_plane_rot_err + (1-0.125)*self.last_vel_msg.data[3]
       self.last_vel_msg = self.vel_msg
       self.OCT_clk_ctrl_pub.publish(self.OCT_clk_ctrl_msg)
       self.vel_pub.publish(self.vel_msg)
