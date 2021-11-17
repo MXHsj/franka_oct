@@ -7,10 +7,10 @@ from pyrealsense2 import pyrealsense2 as rs
 
 
 class GetRealSenseData():
+  __pipeline = rs.pipeline()
+  __config = rs.config()
 
   def __init__(self):
-    self.__pipeline = rs.pipeline()
-    self.__config = rs.config()
     self.__config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
     self.__config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
     # process
@@ -86,7 +86,7 @@ class GetRealSenseData():
     depth_frame = rs.disparity_transform(False).process(depth_frame)
     return depth_frame
 
-  def getPoint(depth_frame, pixels):
+  def getPoint(self, depth_frame, pixels, flatten_out=False):
     depth_intrin = depth_frame.profile.as_video_stream_profile().intrinsics
     points = []
     for i in range(len(pixels)):
@@ -96,10 +96,11 @@ class GetRealSenseData():
         pnt = rs.rs2_deproject_pixel_to_point(depth_intrin, pix, depth_in_met)
       except Exception as err:
         print(err)
-        pnt = [0.0, 0.0, 0.0]
+        pnt = [-1, -1, -1]
       points.append(pnt)
-    points_formatted = np.reshape(points, [3, len(pixels)]).T
-    # points_formatted = np.array(points).flatten()
+    points_formatted = np.reshape(points, [len(pixels), 3])
+    if flatten_out:
+      points_formatted = np.array(points).flatten()
     return points_formatted
 
 
@@ -111,7 +112,7 @@ def breakLoop(vis):
 
 
 # test case: visualize pointcloud using open3d
-def test():
+def main():
   get_realsense_data = GetRealSenseData()
 
   pointcloud = o3d.geometry.PointCloud()
@@ -155,4 +156,4 @@ def test():
 
 
 if __name__ == "__main__":
-  test()
+  main()
