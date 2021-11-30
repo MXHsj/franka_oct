@@ -10,7 +10,7 @@ from franka_msgs.msg import FrankaState
 from std_msgs.msg import Float64MultiArray
 
 
-class TranslationalScan():
+class DoScan():
   T_O_ee = None       # T base to eef
   T_O_tar = None      # T base to target
   T_cam_tar = None    # T realsense to target
@@ -139,4 +139,4 @@ class TranslationalScan():
 
 
 if __name__ == "__main__":
-  TranslationalScan()
+  DoScan()

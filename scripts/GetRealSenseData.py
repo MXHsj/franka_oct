@@ -1,8 +1,7 @@
 #! /usr/bin/env python3
-import sys
 import numpy as np
 from cv2 import cv2
-import open3d as o3d
+from GetSurfaceNorm import *
 from pyrealsense2 import pyrealsense2 as rs
 
 
@@ -19,7 +18,9 @@ class GetRealSenseData():
     # frame data
     self.depth_image = None
     self.depth_colormap = None
+    self.depth_frame = None
     self.color_image = None
+    self.color_frame = None
     self.verts = None           # xyz
     self.texcoords = None       # u,v
     # start streaming
@@ -28,71 +29,71 @@ class GetRealSenseData():
     self.__profile = self.__pipeline.get_active_profile()
     self.intr = self.__profile.get_stream(rs.stream.color).as_video_stream_profile().get_intrinsics()
 
+  def __del__(self):
+    self.__pipeline.stop()
+
   # ====================== interface ======================
   def stream_color_frame(self):
     frames = self.__pipeline.wait_for_frames()
-    color_frame = frames.get_color_frame()
-    if color_frame:
+    self.color_frame = frames.get_color_frame()
+    if self.color_frame:
       # Convert images to numpy arrays
-      self.color_image = np.asanyarray(color_frame.get_data())
-    return color_frame
+      self.color_image = np.asanyarray(self.color_frame.get_data())
 
   def stream_depth_frame(self):
     frames = self.__pipeline.wait_for_frames()
-    depth_frame = frames.get_depth_frame()
+    self.depth_frame = frames.get_depth_frame()
     # apply depth filters
-    depth_frame = self.depth_filter(depth_frame)
-    if depth_frame:
+    self.depth_filter()
+    if self.depth_frame:
       # Convert images to numpy arrays
-      self.depth_image = np.asanyarray(depth_frame.get_data())
+      self.depth_image = np.asanyarray(self.depth_frame.get_data())
       self.depth_colormap = cv2.applyColorMap(
           cv2.convertScaleAbs(self.depth_image, alpha=0.03), cv2.COLORMAP_JET)
-    return depth_frame
 
   def stream_depth2color_aligned(self):
     frames = self.__pipeline.wait_for_frames()
     # align depth to color frame
     aligned_frames = self.__align_depth2color.process(frames)
-    depth_frame = aligned_frames.get_depth_frame()
-    color_frame = aligned_frames.get_color_frame()
+    self.depth_frame = aligned_frames.get_depth_frame()
+    self.color_frame = aligned_frames.get_color_frame()
     # apply depth filters
-    depth_frame = self.depth_filter(depth_frame)
-    if depth_frame and color_frame:
-      self.depth_image = np.asanyarray(depth_frame.get_data())
+    self.depth_filter()
+    if self.depth_frame and self.color_frame:
+      self.depth_image = np.asanyarray(self.depth_frame.get_data())
       self.depth_colormap = cv2.applyColorMap(
           cv2.convertScaleAbs(self.depth_image, alpha=0.03), cv2.COLORMAP_JET)
-      self.color_image = np.asanyarray(color_frame.get_data())
-    return depth_frame, color_frame
+      self.color_image = np.asanyarray(self.color_frame.get_data())
 
   def stream_pointcloud(self):
-    depth_frame, color_frame = self.stream_depth2color_aligned()
-    points = self.__pc.calculate(depth_frame)
-    self.__pc.map_to(depth_frame)
-    # Pointcloud data to arrays
-    v, t = points.get_vertices(), points.get_texture_coordinates()
-    self.verts = np.asanyarray(v).view(np.float32).reshape(-1, 3)   # xyz
-    self.texcoords = np.asanyarray(t).view(np.float32).reshape(-1, 2)  # uv
-    return depth_frame, color_frame
-
-  def stop_stream(self):
-    self.__pipeline.stop()
+    self.stream_depth2color_aligned()
+    if self.depth_frame:
+      points = self.__pc.calculate(self.depth_frame)
+      self.__pc.map_to(self.depth_frame)
+      # Pointcloud data to arrays
+      v, t = points.get_vertices(), points.get_texture_coordinates()
+      self.verts = np.asanyarray(v).view(np.float32).reshape(-1, 3)   # xyz
+      self.texcoords = np.asanyarray(t).view(np.float32).reshape(-1, 2)  # uv
 
   # ====================== utility ======================
-  def depth_filter(self, depth_frame):
-    depth_frame = rs.decimation_filter(1).process(depth_frame)
-    depth_frame = rs.disparity_transform(True).process(depth_frame)
-    depth_frame = rs.spatial_filter().process(depth_frame)
-    depth_frame = rs.temporal_filter().process(depth_frame)
-    depth_frame = rs.disparity_transform(False).process(depth_frame)
-    return depth_frame
+  def depth_filter(self):
+    if self.depth_frame:
+      self.depth_frame = rs.decimation_filter(1).process(self.depth_frame)
+      self.depth_frame = rs.disparity_transform(True).process(self.depth_frame)
+      self.depth_frame = rs.spatial_filter().process(self.depth_frame)
+      self.depth_frame = rs.temporal_filter().process(self.depth_frame)
+      self.depth_frame = rs.disparity_transform(False).process(self.depth_frame)
 
-  def getPoint(self, depth_frame, pixels, flatten_out=False):
-    depth_intrin = depth_frame.profile.as_video_stream_profile().intrinsics
+  def get_xyz(self, pixels: list, flatten_out=False) -> np.ndarray:
+    '''
+    get xyz points from pixels in depth frame
+    '''
+    depth_intrin = self.depth_frame.profile.as_video_stream_profile().intrinsics
     points = []
     for i in range(len(pixels)):
       pix = pixels[i]
       try:
-        depth_in_met = depth_frame.as_depth_frame().get_distance(pix[1], pix[0])
+        depth_in_met = self.depth_frame.as_depth_frame().get_distance(pix[1], pix[0])
         pnt = rs.rs2_deproject_pixel_to_point(depth_intrin, pix, depth_in_met)
       except Exception as err:
         print(err)
@@ -103,27 +104,29 @@ class GetRealSenseData():
       points_formatted = np.array(points).flatten()
     return points_formatted
 
+  def get_pix(self, points: list, flatten_out=False) -> np.ndarray:
+    '''
+    get pixels from points
+    '''
+    # TODO: complete this method
+    pix = []
+    pix_formatted = np.reshape(pix, [len(pix), 2])
+    return pix_formatted
 
-# exit
-def breakLoop(vis):
-  vis.destroy_window()
-  cv2.destroyAllWindows()
-  sys.exit()
+  def get_surface_normal(self, frame, pixel: list) -> np.ndarray:
+    '''
+    given a pixel in 2D image, calculate normal vector
+    '''
+    # TODO: test this method
+    patch = get_patch(pixel)
+    points = self.get_xyz(self.depth_frame, patch)
+    norm = get_surface_normal(points[:, 0], points[:, 1], points[:, 2])
+    return norm
 
 
-# test case: visualize pointcloud using open3d
-def main():
+# test case
+if __name__ == "__main__":
   get_realsense_data = GetRealSenseData()
-
-  pointcloud = o3d.geometry.PointCloud()
-  cam_intr = o3d.camera.PinholeCameraIntrinsic(
-      get_realsense_data.intr.width, get_realsense_data.intr.height,
-      get_realsense_data.intr.fx, get_realsense_data.intr.fy,
-      get_realsense_data.intr.ppx, get_realsense_data.intr.ppy)
-  vis = o3d.visualization.VisualizerWithKeyCallback()
-  vis.create_window("pointcloud", 640, 480)
-  vis.register_key_callback(ord("Q"), breakLoop)
-  isGeometryAdded = False
 
   cv2.namedWindow('RGB-depth', cv2.WINDOW_AUTOSIZE)
   while True:
@@ -132,28 +135,5 @@ def main():
     cv2.imshow('RGB-depth', color_depth_stack)
     key = cv2.waitKey(10)
     if key & 0xFF == ord('Q') or key == 27:
-      get_realsense_data.stop_stream()
-      breakLoop(vis)
+      cv2.destroyAllWindows()
       break
-
-    pointcloud.clear()
-    depth = o3d.geometry.Image(get_realsense_data.depth_image)
-    rgb = cv2.cvtColor(get_realsense_data.color_image, cv2.COLOR_RGB2BGR)
-    color = o3d.geometry.Image(rgb)
-
-    rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(
-        color, depth, convert_rgb_to_intensity=False)
-    pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd, cam_intr)
-    pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
-    pointcloud += pcd
-    if not isGeometryAdded:
-      vis.add_geometry(pointcloud)
-      isGeometryAdded = True
-    # update geometry
-    vis.update_geometry(pointcloud)
-    vis.poll_events()
-    vis.update_renderer()
-
-
-if __name__ == "__main__":
-  main()

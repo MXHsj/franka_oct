@@ -1,4 +1,7 @@
 #! /usr/bin/env python3
+'''
+automatic ROI selection: to be worked on
+'''
 import sys
 import rospy
 from cv2 import cv2

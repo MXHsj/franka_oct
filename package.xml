@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>robotic_oct</name>
+  <name>franka_oct</name>
   <version>0.0.0</version>
-  <description>The robotic_oct package</description>
+  <description>The franka_oct package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

@@ -10,7 +10,7 @@ from franka_msgs.msg import FrankaState
 from std_msgs.msg import Float64MultiArray
 
 
-class TranslationalScan():
+class DoTranslationalScan():
   T_O_ee = None       # T base to eef
   T_O_tar = None      # T base to target
   T_cam_tar = None    # T realsense to target
@@ -37,8 +37,8 @@ class TranslationalScan():
     self.vel_pub = rospy.Publisher('franka_cmd_vel', Float64MultiArray, queue_size=1)
     self.pos_pub = rospy.Publisher('franka_cmd_pos', Float64MultiArray, queue_size=1)
     '''
-        parameters
-        '''
+    parameters
+    '''
     # define initial pose
     y_offset = -(7.5-1.0)*1e-3    # 7.5(BScan width) - 1.0(overlap)
     x_offset = 0.01
@@ -139,4 +139,4 @@ class TranslationalScan():
 
 
 if __name__ == "__main__":
-  TranslationalScan()
+  DoTranslationalScan()
