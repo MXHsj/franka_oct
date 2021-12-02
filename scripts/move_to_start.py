@@ -8,11 +8,11 @@ if __name__ == '__main__':
   commander = MoveGroupCommander('panda_arm')
   joint_goal = commander.get_current_joint_values()
 
-  # front scan OCT configuration
+  # OCT scan home configuration
   joint_goal[0] = 0.0000
-  joint_goal[1] = -math.pi/6
+  joint_goal[1] = 0.0000  # -math.pi/6
   joint_goal[2] = 0.0000
-  joint_goal[3] = -2*math.pi/3
+  joint_goal[3] = -math.pi/2  # -2*math.pi/3
   joint_goal[4] = 0.0000
   joint_goal[5] = math.pi/2
   joint_goal[6] = math.pi/6

@@ -4,9 +4,9 @@ import rospy
 from cv2 import cv2
 import selectinwindow
 from GetRealSenseData import *
+from franka_msgs.msg import FrankaState
 from std_msgs.msg import Float64
 from std_msgs.msg import Float64MultiArray
-from franka_msgs.msg import FrankaState
 
 # Set recursion limit
 sys.setrecursionlimit(10 ** 9)
@@ -41,7 +41,7 @@ def generate_scan_path(rec_obj, rs_obj):
   for i in range(num_scans):
     scan_starts_cam[i, :] = corner_xyz[0]
     scan_starts_cam[i, 0] += i*scan_interv
-    scan_starts_cam[i, 2] = 0.75*np.mean(corner_xyz[:, -1])   # 0.75 -> safe height
+    scan_starts_cam[i, 2] = np.mean(corner_xyz[:, -1])+0.05   # 0.04 m safe distance
   print(scan_starts_cam)
   scan_starts_base = convert2base(scan_starts_cam)  # convert to base frame
   return scan_starts_base, scan_length
@@ -90,6 +90,7 @@ scan_length_pub = rospy.Publisher('OCT_scan_path_length', Float64, queue_size=1)
 scan_starts_msg = Float64MultiArray()
 scan_length_msg = Float64()
 rate = rospy.Rate(20)
+
 try:
   while not rospy.is_shutdown():
     realsense.stream_depth2color_aligned()
