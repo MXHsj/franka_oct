@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import sys
 import time
 import rospy
 import actionlib
@@ -32,10 +32,10 @@ rospy.Subscriber('OCT_scan_path_starts', Float64MultiArray, scan_starts_callback
 rospy.Subscriber('OCT_scan_path_length', Float64, scan_length_callback)
 scan_process = DoScan()
 
-while not rospy.is_shutdown():
-  if scan_length is not None and scan_starts[0] is not None:
-    print('scan path received')
-    break
+while scan_length is None or scan_starts is None:
+  if rospy.is_shutdown():
+    sys.exit(0)
+print('scan path received')
 
 # Create a ros action client to communicate with the driver
 client = actionlib.SimpleActionClient('/arm/cartesian/pose', MoveToPoseAction)
@@ -43,7 +43,7 @@ client.wait_for_server()
 # Create a target pose
 target = PoseStamped()
 target.header.frame_id = 'panda_link0'
-for scan in range(len(scan_starts)-1):
+for scan in range(len(scan_starts)):
   target.pose.position.x = scan_starts[scan][0] - scan_length
   target.pose.position.y = scan_starts[scan][1]
   target.pose.position.z = scan_starts[scan][2]
@@ -70,7 +70,7 @@ for scan in range(len(scan_starts)-1):
 # go home
 target.pose.position.x = 0.35
 target.pose.position.y = 0.00
-target.pose.position.z = 0.35
+target.pose.position.z = 0.40
 target.pose.orientation.x = 1.00
 target.pose.orientation.y = 0.00
 target.pose.orientation.z = 0.00

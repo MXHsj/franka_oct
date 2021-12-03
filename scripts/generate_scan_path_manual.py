@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 import sys
 import rospy
+import numpy as np
 from cv2 import cv2
 import selectinwindow
 from GetRealSenseData import *
@@ -35,15 +36,15 @@ def generate_scan_path(rec_obj, rs_obj):
   scan_width = corner_xyz[1][0] - corner_xyz[0][0]    # (x+w,y) - (x,y)
   scan_length = corner_xyz[2][1] - corner_xyz[0][1]   # (x,y+h) - (x,y)
   print("ROI width[mm] ", scan_width*1000, "ROI height[mm] ", scan_length*1000)
-  num_scans = int(scan_width*1000/(5-0))-1    # 0 mm overlap
+  num_scans = int(np.ceil(scan_width*1000/(7.5-0)))   # 7.5 mm lateral FOV; 0 mm overlap
   scan_interv = scan_width/num_scans
   scan_starts_cam = np.zeros((num_scans, 3))
   for i in range(num_scans):
     scan_starts_cam[i, :] = corner_xyz[0]
     scan_starts_cam[i, 0] += i*scan_interv
-    scan_starts_cam[i, 2] = np.mean(corner_xyz[:, -1])+0.05   # 0.04 m safe distance
-  print(scan_starts_cam)
+    scan_starts_cam[i, 2] = np.mean(corner_xyz[:, -1])-0.05   # [m] safe distance
   scan_starts_base = convert2base(scan_starts_cam)  # convert to base frame
+  print(scan_starts_base)
   return scan_starts_base, scan_length
 
 
@@ -73,7 +74,7 @@ T_ee_cam = \
     np.array([[0.0, 1.0, 0.0, 0.0],
               [-1.0, 0.0, 0.0, 0.0],
               [0.0, 0.0, 1.0, 0.0],
-              [-0.11, -0.037, -0.065, 1.0]]).transpose()
+              [-0.11, -0.038, -0.065, 1.0]]).transpose()
 
 realsense = GetRealSenseData()
 cv2.namedWindow('realsense', cv2.WINDOW_AUTOSIZE)
