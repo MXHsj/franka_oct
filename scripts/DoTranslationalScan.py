@@ -39,11 +39,11 @@ class DoTranslationalScan():
     self.T_O_tar = \
         np.array([[1.0, 0.0, 0.0, 0.434],
                   [0.0, -1.0, 0.0, 0.00],
-                  [0.0, 0.0, -1.0, 0.13],
+                  [0.0, 0.0, -1.0, 0.18],
                   [0.0, 0.0, 0.0, 1.0]])
     self.rate = rospy.Rate(1000)
-    self.scan_dist = 0.045        # scan distance [m]
-    self.lin_vel_x = 0.0008       # [m/s] scan along +x direction
+    self.scan_dist = 0.045        # [m] scan distance
+    self.lin_vel_x = 0.00060      # [m/s] scan velocity +x direction
     print("connecting to OCT desktop ...")
     while self.T_O_ee is None or self.surf_height_ratio is None:
       if rospy.is_shutdown():
@@ -54,11 +54,11 @@ class DoTranslationalScan():
     # ---------- landing ----------
     print('landing ...')
     while not rospy.is_shutdown():
-      self.vel_msg.twist.linear.z = -0.0075*(0.7-self.surf_height_ratio)
+      self.vel_msg.twist.linear.z = -0.0035*(0.7-self.surf_height_ratio)
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
       self.vel_pub.publish(vel_msg_filtered)
-      if self.surf_height_ratio >= 0.7 and abs(self.in_plane_rot_err) < 0.06:
+      if self.surf_height_ratio > 0.7:
         break
       self.rate.sleep()
     # ---------- scan ----------
@@ -66,7 +66,7 @@ class DoTranslationalScan():
     self.scan_flag_msg.data = 1
     while not rospy.is_shutdown():
       self.vel_msg.twist.linear.x = self.lin_vel_x
-      self.vel_msg.twist.linear.z = -0.0075*(0.7-self.surf_height_ratio)
+      self.vel_msg.twist.linear.z = -0.0035*(0.7-self.surf_height_ratio)
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
       self.scan_flag_pub.publish(self.scan_flag_msg)
@@ -145,7 +145,7 @@ if __name__ == "__main__":
   target = PoseStamped()
   target.header.frame_id = 'panda_link0'
   # define entry pose & scan length
-  y_offset = -(7.5-1.0)*1e-3    # 7.5(BScan width) - 1.0(overlap) [mm]
+  y_offset = -(7.8-1.0)*1e-3    # 7.8(BScan width) [mm] - 1.0(overlap) [mm]
   target.pose.position.x = scan.T_O_tar[0, -1]
   target.pose.position.y = scan.T_O_tar[1, -1] + 0*y_offset
   target.pose.position.z = scan.T_O_tar[2, -1]
@@ -156,7 +156,6 @@ if __name__ == "__main__":
   scan.T_O_tar[0, -1] = target.pose.position.x
   scan.T_O_tar[1, -1] = target.pose.position.y
   scan.T_O_tar[2, -1] = target.pose.position.z
-  scan_process.set_target_pose(T_O_tar)
   goal = MoveToPoseGoal(goal_pose=target)
   # Send goal and wait for it to finish
   client.send_goal(goal)

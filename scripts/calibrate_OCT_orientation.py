@@ -30,17 +30,12 @@ class TranslationalScan():
     # initialize ROS node
     rospy.init_node('OCT_scan_test', anonymous=True)
     # subscriber
-    rospy.Subscriber("franka_state_controller/franka_states",
-                     FrankaState, self.ee_callback)
-    rospy.Subscriber('OCT_img_fb', Float64MultiArray,
-                     self.OCT_img_callback)
+    rospy.Subscriber("franka_state_controller/franka_states", FrankaState, self.ee_callback)
+    rospy.Subscriber('OCT_img_fb', Float64MultiArray, self.OCT_img_callback)
     # publisher
-    OCT_clk_ctrl_pub = rospy.Publisher(
-        'OCT_clk_ctrl', Int16, queue_size=50)
-    vel_pub = rospy.Publisher(
-        'franka_cmd_vel', Float64MultiArray, queue_size=1)
-    pos_pub = rospy.Publisher(
-        'franka_cmd_pos', Float64MultiArray, queue_size=1)
+    OCT_clk_ctrl_pub = rospy.Publisher('OCT_clk_ctrl', Int16, queue_size=50)
+    vel_pub = rospy.Publisher('franka_cmd_vel', Float64MultiArray, queue_size=1)
+    pos_pub = rospy.Publisher('franka_cmd_pos', Float64MultiArray, queue_size=1)
 
     print("connecting to OCT desktop ...")
     while self.T_O_ee is None or self.surf_height_ratio is None:

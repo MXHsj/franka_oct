@@ -43,7 +43,7 @@ class DoScan():
                   [0.0, 0.0, 0.0, 1.0]])
     self.rate = rospy.Rate(1000)
     self.scan_dist = 0.045        # scan distance [m]
-    self.lin_vel_x = 0.0008       # [m/s] scan along +x direction
+    self.lin_vel_x = 0.0006       # [m/s] scan along +x direction
     print("connecting to OCT desktop ...")
     while self.T_O_ee is None or self.surf_height_ratio is None:
       if rospy.is_shutdown():
@@ -54,7 +54,7 @@ class DoScan():
     # ---------- landing ----------
     print('landing ...')
     while not rospy.is_shutdown():
-      desired_vel = -0.0075*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
+      desired_vel = -0.0032*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
       # self.vel_msg.twist.linear.y = math.cos(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       # self.vel_msg.twist.linear.z = math.sin(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       self.vel_msg.twist.linear.z = desired_vel
@@ -62,7 +62,7 @@ class DoScan():
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
       self.vel_pub.publish(vel_msg_filtered)
-      if self.surf_height_ratio >= 0.7 and abs(self.in_plane_rot_err) < 0.06:
+      if self.surf_height_ratio > 0.7 and abs(self.in_plane_rot_err) < 0.05:
         break
       self.rate.sleep()
     # ---------- scan ----------
@@ -70,7 +70,7 @@ class DoScan():
     self.scan_flag_msg.data = 1
     while not rospy.is_shutdown():
       self.vel_msg.twist.linear.x = self.lin_vel_x
-      desired_vel = -0.0075*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
+      desired_vel = -0.0050*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
       # self.vel_msg.twist.linear.y = math.cos(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       # self.vel_msg.twist.linear.z = math.sin(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       self.vel_msg.twist.linear.z = desired_vel

@@ -5,6 +5,7 @@ import rospy
 import actionlib
 import numpy as np
 from DoScan import *
+from DoTranslationalScan import *
 from std_msgs.msg import Float64
 from std_msgs.msg import Float64MultiArray
 from geometry_msgs.msg import PoseStamped
@@ -31,6 +32,7 @@ rospy.init_node('rv_panda_test', anonymous=True)
 rospy.Subscriber('OCT_scan_path_starts', Float64MultiArray, scan_starts_callback)
 rospy.Subscriber('OCT_scan_path_length', Float64, scan_length_callback)
 scan_process = DoScan()
+# scan_process = DoTranslationalScan()
 
 while scan_length is None or scan_starts is None:
   if rospy.is_shutdown():
@@ -43,10 +45,11 @@ client.wait_for_server()
 # Create a target pose
 target = PoseStamped()
 target.header.frame_id = 'panda_link0'
+start_time = time.time()
 for scan in range(len(scan_starts)):
   target.pose.position.x = scan_starts[scan][0] - scan_length
   target.pose.position.y = scan_starts[scan][1]
-  target.pose.position.z = scan_starts[scan][2]
+  target.pose.position.z = 0.18  # scan_starts[scan][2]
   target.pose.orientation.x = 1.00
   target.pose.orientation.y = 0.00
   target.pose.orientation.z = 0.00
@@ -58,7 +61,7 @@ for scan in range(len(scan_starts)):
   T_O_tar[1, -1] = target.pose.position.y
   T_O_tar[2, -1] = target.pose.position.z
   scan_process.set_target_pose(T_O_tar)
-  scan_process.set_scan_dist(scan_length)
+  scan_process.set_scan_dist(scan_length*0.8)  # make scan length shorter for safety
   # Create goal from target pose
   goal = MoveToPoseGoal(goal_pose=target)
   # Send goal and wait for it to finish
@@ -66,7 +69,7 @@ for scan in range(len(scan_starts)):
   client.wait_for_result()
   # do scan process
   scan_process.doScanProcess()
-
+print('scan process took:', (time.time()-start_time)/60, 'minutes')
 # go home
 target.pose.position.x = 0.35
 target.pose.position.y = 0.00
