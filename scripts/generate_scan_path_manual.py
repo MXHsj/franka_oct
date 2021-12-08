@@ -42,7 +42,7 @@ def generate_scan_path(rec_obj, rs_obj):
   for i in range(num_scans):
     scan_starts_cam[i, :] = corner_xyz[0]
     scan_starts_cam[i, 0] += i*scan_interv
-    scan_starts_cam[i, 2] = np.mean(corner_xyz[:, -1])-0.1   # [m] safe distance
+    scan_starts_cam[i, 2] = np.mean(corner_xyz[:, -1])-0.12   # [m] safe distance
   scan_starts_base = convert2base(scan_starts_cam)  # convert to base frame
   print(scan_starts_base)
   return scan_starts_base, scan_length
@@ -59,7 +59,7 @@ def break_loop():
 
 def ee_callback(msg):
   global T_O_ee
-  EE_pos = msg.O_T_EE_d  # inv 4x4 matrix
+  EE_pos = msg.O_T_EE   # inv 4x4 matrix
   T_O_ee = np.array([EE_pos[0:4], EE_pos[4:8], EE_pos[8:12], EE_pos[12:16]]).transpose()
 
 
@@ -74,7 +74,7 @@ T_ee_cam = \
     np.array([[0.0, 1.0, 0.0, 0.0],
               [-1.0, 0.0, 0.0, 0.0],
               [0.0, 0.0, 1.0, 0.0],
-              [-0.112, -0.0370, -0.065, 1.0]]).transpose()
+              [-0.112, -0.0340, -0.065, 1.0]]).transpose()
 
 realsense = GetRealSenseData()
 cv2.namedWindow('realsense', cv2.WINDOW_AUTOSIZE)

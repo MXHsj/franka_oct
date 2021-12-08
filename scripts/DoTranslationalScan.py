@@ -37,12 +37,12 @@ class DoTranslationalScan():
     self.vel_pub = rospy.Publisher('/arm/cartesian/velocity', TwistStamped, queue_size=1)
     # entry pose
     self.T_O_tar = \
-        np.array([[1.0, 0.0, 0.0, 0.434],
+        np.array([[1.0, 0.0, 0.0, 0.430],
                   [0.0, -1.0, 0.0, 0.00],
-                  [0.0, 0.0, -1.0, 0.18],
+                  [0.0, 0.0, -1.0, 0.20],
                   [0.0, 0.0, 0.0, 1.0]])
     self.rate = rospy.Rate(1000)
-    self.scan_dist = 0.045        # [m] scan distance
+    self.scan_dist = 0.043        # [m] scan distance
     self.lin_vel_x = 0.00060      # [m/s] scan velocity +x direction
     print("connecting to OCT desktop ...")
     while self.T_O_ee is None or self.surf_height_ratio is None:
@@ -127,7 +127,7 @@ class DoTranslationalScan():
     return filtered
 
   def ee_callback(self, msg):
-    EE_pos = msg.O_T_EE_d  # inv 4x4 matrix
+    EE_pos = msg.O_T_EE   # inv 4x4 matrix
     self.T_O_ee = np.array([EE_pos[0:4], EE_pos[4:8], EE_pos[8:12], EE_pos[12:16]]).transpose()
 
   def OCT_remote_callback(self, msg):
@@ -145,7 +145,8 @@ if __name__ == "__main__":
   target = PoseStamped()
   target.header.frame_id = 'panda_link0'
   # define entry pose & scan length
-  y_offset = -(7.8-1.0)*1e-3    # 7.8(BScan width) [mm] - 1.0(overlap) [mm]
+  overlap = 0.0                     # [mm] overlap
+  y_offset = -(7.8-overlap)*1e-3    # 7.8(BScan width) [mm] - (overlap) [mm]
   target.pose.position.x = scan.T_O_tar[0, -1]
   target.pose.position.y = scan.T_O_tar[1, -1] + 0*y_offset
   target.pose.position.z = scan.T_O_tar[2, -1]
