@@ -13,7 +13,7 @@ from std_msgs.msg import Bool
 
 
 def ee_callback(msg):
-  EE_pos = msg.O_T_EE_d  # inv 4x4 matrix
+  EE_pos = msg.O_T_EE  # inv 4x4 matrix
   global T_O_ee
   T_O_ee = np.array([EE_pos[0:4], EE_pos[4:8], EE_pos[8:12], EE_pos[12:16]]).transpose()
 

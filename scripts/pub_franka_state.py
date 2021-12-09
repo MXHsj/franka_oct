@@ -2,7 +2,6 @@
 '''
 publish franka state using ros built in message types for MATLAB
 '''
-# import time
 import rospy
 import numpy as np
 from franka_msgs.msg import FrankaState
@@ -20,14 +19,10 @@ class pub_franka_state():
     self.franka_state_pub = rospy.Publisher('franka_state_custom', Float64MultiArray, queue_size=3)
     self.rate = rospy.Rate(pub_rate)
     print("publishing franka state ...")
-    # update_timer = time.time()
     while not rospy.is_shutdown():
       if self.T_O_ee is not None:
         self.franka_state_msg.data = self.T_O_ee.flatten()
         self.franka_state_pub.publish(self.franka_state_msg)
-        # if time.time() - update_timer > self.update_period:
-        #   self.disp_robot_state()
-        #   update_timer = time.time()
       else:
         pass
       self.rate.sleep()

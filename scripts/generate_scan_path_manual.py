@@ -74,7 +74,7 @@ T_ee_cam = \
     np.array([[0.0, 1.0, 0.0, 0.0],
               [-1.0, 0.0, 0.0, 0.0],
               [0.0, 0.0, 1.0, 0.0],
-              [-0.112, -0.0340, -0.065, 1.0]]).transpose()
+              [-0.112, -0.0378, -0.065, 1.0]]).transpose()
 
 realsense = GetRealSenseData()
 cv2.namedWindow('realsense', cv2.WINDOW_AUTOSIZE)

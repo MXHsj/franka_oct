@@ -2,16 +2,12 @@
 '''
 do single round OCT scan (translational motion only)
 '''
-import math
 import rospy
-import actionlib
 import numpy as np
 from std_msgs.msg import Int8
 from franka_msgs.msg import FrankaState
 from std_msgs.msg import Float64MultiArray
-from geometry_msgs.msg import PoseStamped
-from geometry_msgs.msg import TwistStamped
-from rv_msgs.msg import MoveToPoseAction, MoveToPoseGoal
+from geometry_msgs.msg import Twist
 
 
 class DoTranslationalScan():
@@ -20,21 +16,24 @@ class DoTranslationalScan():
   surf_height_ratio = None        # target surface height
   isRemoteDataSaved = 0           # 1: data saved on OCT desktop; 0: data hasn't been saved
   scan_flag_msg = Int8()          # 1: scanning; 0: scan stop;
-  vel_msg = TwistStamped()
-  vel_msg.twist.linear.x = 0.0
-  vel_msg.twist.linear.y = 0.0
-  vel_msg.twist.linear.z = 0.0
-  vel_msg.twist.angular.x = 0.0
-  vel_msg.twist.angular.y = 0.0
-  vel_msg.twist.angular.z = 0.0
+  vel_msg = Twist()
+  vel_msg.linear.x = 0.0
+  vel_msg.linear.y = 0.0
+  vel_msg.linear.z = 0.0
+  vel_msg.angular.x = 0.0
+  vel_msg.angular.y = 0.0
+  vel_msg.angular.z = 0.0
   vel_msg_last = vel_msg
+  pos_msg = Float64MultiArray()
+  pos_msg.data = [0.0]*12
 
   def __init__(self):
     # subscriber & publisher
     rospy.Subscriber("franka_state_controller/franka_states", FrankaState, self.ee_callback)
     rospy.Subscriber('OCT_remote_response', Float64MultiArray, self.OCT_remote_callback)
-    self.scan_flag_pub = rospy.Publisher('OCT_scan_flag', Int8, queue_size=50)
-    self.vel_pub = rospy.Publisher('/arm/cartesian/velocity', TwistStamped, queue_size=1)
+    self.scan_flag_pub = rospy.Publisher('OCT_scan_flag', Int8, queue_size=1)
+    self.vel_pub = rospy.Publisher('franka_cmd_acc', Twist, queue_size=1)
+    self.pos_pub = rospy.Publisher('franka_cmd_pos', Float64MultiArray, queue_size=1)
     # entry pose
     self.T_O_tar = \
         np.array([[1.0, 0.0, 0.0, 0.430],
@@ -42,7 +41,7 @@ class DoTranslationalScan():
                   [0.0, 0.0, -1.0, 0.20],
                   [0.0, 0.0, 0.0, 1.0]])
     self.rate = rospy.Rate(1000)
-    self.scan_dist = 0.043        # [m] scan distance
+    self.scan_dist = 0.040        # [m] scan distance
     self.lin_vel_x = 0.00060      # [m/s] scan velocity +x direction
     print("connecting to OCT desktop ...")
     while self.T_O_ee is None or self.surf_height_ratio is None:
@@ -50,11 +49,27 @@ class DoTranslationalScan():
         return
     print("robot state received \nconnection establised")
 
+  def go_to_entry(self):
+    # ---------- go to entry pose ----------
+    while not rospy.is_shutdown():
+      self.pos_msg.data = self.T_O_tar[:3, :4].transpose().flatten()
+      T_error = np.subtract(self.T_O_tar, self.T_O_ee)
+      trans_error = T_error[0:3, 3]
+      rot_error = T_error[0:3, 0:3].flatten()
+      isReachedTrans = True if sum([abs(err) < 0.001 for err in trans_error]) == len(trans_error) else False
+      isReachedRot = True if sum([abs(err) < 0.05 for err in rot_error]) == len(rot_error) else False
+      # print(isReachedTrans, isReachedRot)
+      if isReachedRot and isReachedTrans:
+        print('reached entry pose')
+        return
+      self.pos_pub.publish(self.pos_msg)
+      self.rate.sleep()
+
   def doScanProcess(self):
     # ---------- landing ----------
     print('landing ...')
     while not rospy.is_shutdown():
-      self.vel_msg.twist.linear.z = -0.0035*(0.7-self.surf_height_ratio)
+      self.vel_msg.linear.z = -0.0035*(0.7-self.surf_height_ratio)
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
       self.vel_pub.publish(vel_msg_filtered)
@@ -65,8 +80,8 @@ class DoTranslationalScan():
     print('scanning ...')
     self.scan_flag_msg.data = 1
     while not rospy.is_shutdown():
-      self.vel_msg.twist.linear.x = self.lin_vel_x
-      self.vel_msg.twist.linear.z = -0.0035*(0.7-self.surf_height_ratio)
+      self.vel_msg.linear.x = self.lin_vel_x
+      self.vel_msg.linear.z = -0.0035*(0.7-self.surf_height_ratio)
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
       self.scan_flag_pub.publish(self.scan_flag_msg)
@@ -75,7 +90,6 @@ class DoTranslationalScan():
         break
       self.rate.sleep()
     # ---------- let OCT desktop save data & clean up ----------
-    # TODO: send signal to OCT desktop for data saving
     self.finish()
     print('finish scan, waiting for remote data to be saved ...')
     while not rospy.is_shutdown():
@@ -102,28 +116,28 @@ class DoTranslationalScan():
 
   def finish(self):
     self.scan_flag_msg.data = 0
-    self.vel_msg.twist.linear.x = 0
-    self.vel_msg.twist.linear.x = 0
-    self.vel_msg.twist.linear.x = 0
-    self.vel_msg.twist.angular.x = 0
-    self.vel_msg.twist.angular.y = 0
-    self.vel_msg.twist.angular.z = 0
+    self.vel_msg.linear.x = 0
+    self.vel_msg.linear.x = 0
+    self.vel_msg.linear.x = 0
+    self.vel_msg.angular.x = 0
+    self.vel_msg.angular.y = 0
+    self.vel_msg.angular.z = 0
     for i in range(3000):
       self.scan_flag_pub.publish(self.scan_flag_msg)
       self.vel_pub.publish(self.vel_msg)
 
-  def IIR_filter(self) -> TwistStamped:
+  def IIR_filter(self) -> Twist:
     """
     apply IIR filter on velocity commands
     """
     p = 0.125
-    filtered = TwistStamped()
-    filtered.twist.linear.x = self.vel_msg.twist.linear.x
-    filtered.twist.linear.y = p*self.vel_msg.twist.linear.y + (1-p)*self.vel_msg_last.twist.linear.y
-    filtered.twist.linear.z = p*self.vel_msg.twist.linear.z + (1-p)*self.vel_msg_last.twist.linear.z
-    filtered.twist.angular.x = p*self.vel_msg.twist.angular.x + (1-p)*self.vel_msg_last.twist.angular.x
-    filtered.twist.angular.y = p*self.vel_msg.twist.angular.y + (1-p)*self.vel_msg_last.twist.angular.y
-    filtered.twist.angular.z = p*self.vel_msg.twist.angular.z + (1-p)*self.vel_msg_last.twist.angular.z
+    filtered = Twist()
+    filtered.linear.x = self.vel_msg.linear.x
+    filtered.linear.y = p*self.vel_msg.linear.y + (1-p)*self.vel_msg_last.linear.y
+    filtered.linear.z = p*self.vel_msg.linear.z + (1-p)*self.vel_msg_last.linear.z
+    filtered.angular.x = p*self.vel_msg.angular.x + (1-p)*self.vel_msg_last.angular.x
+    filtered.angular.y = p*self.vel_msg.angular.y + (1-p)*self.vel_msg_last.angular.y
+    filtered.angular.z = p*self.vel_msg.angular.z + (1-p)*self.vel_msg_last.angular.z
     return filtered
 
   def ee_callback(self, msg):
@@ -139,28 +153,15 @@ class DoTranslationalScan():
 if __name__ == "__main__":
   rospy.init_node('OCT_translational_scan_process', anonymous=True)
   scan = DoTranslationalScan()
-  # go to entry pose
-  client = actionlib.SimpleActionClient('/arm/cartesian/pose', MoveToPoseAction)
-  client.wait_for_server()
-  target = PoseStamped()
-  target.header.frame_id = 'panda_link0'
-  # define entry pose & scan length
+  # ===== define entry pose & scan length =====
   overlap = 0.0                     # [mm] overlap
   y_offset = -(7.8-overlap)*1e-3    # 7.8(BScan width) [mm] - (overlap) [mm]
-  target.pose.position.x = scan.T_O_tar[0, -1]
-  target.pose.position.y = scan.T_O_tar[1, -1] + 0*y_offset
-  target.pose.position.z = scan.T_O_tar[2, -1]
-  target.pose.orientation.x = 1.00
-  target.pose.orientation.y = 0.00
-  target.pose.orientation.z = 0.00
-  target.pose.orientation.w = 0.00
-  scan.T_O_tar[0, -1] = target.pose.position.x
-  scan.T_O_tar[1, -1] = target.pose.position.y
-  scan.T_O_tar[2, -1] = target.pose.position.z
-  goal = MoveToPoseGoal(goal_pose=target)
-  # Send goal and wait for it to finish
-  client.send_goal(goal)
-  client.wait_for_result()
-  # translational scan motion
+  # scan.T_O_tar[0, -1] = scan.T_O_tar[0, -1]
+  scan.T_O_tar[1, -1] += 1*y_offset
+  scan.T_O_tar[2, -1] = 0.18
+  scan.scan_dist = 0.040
+  # ===== go to entry pose =====
+  scan.go_to_entry()
+  # ===== translational scan motion =====
   scan.doScanProcess()
   rospy.on_shutdown(scan.finish)
