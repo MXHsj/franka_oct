@@ -41,7 +41,7 @@ class DoScan():
                   [0.0, -1.0, 0.0, 0.00],
                   [0.0, 0.0, -1.0, 0.20],
                   [0.0, 0.0, 0.0, 1.0]])
-    self.rate = rospy.Rate(1000)
+    self.rate = rospy.Rate(800)
     self.scan_dist = 0.040        # [m] scan distance
     self.lin_vel_x = 0.00060      # [m/s] scan velocity +x direction
     print("connecting to OCT desktop ...")
@@ -57,8 +57,8 @@ class DoScan():
       T_error = np.subtract(self.T_O_tar, self.T_O_ee)
       trans_error = T_error[0:3, 3]
       rot_error = T_error[0:3, 0:3].flatten()
-      isReachedTrans = True if sum([abs(err) < 0.001 for err in trans_error]) == len(trans_error) else False
-      isReachedRot = True if sum([abs(err) < 0.05 for err in rot_error]) == len(rot_error) else False
+      isReachedTrans = True if sum([abs(err) < 0.0018 for err in trans_error]) == len(trans_error) else False
+      isReachedRot = True if sum([abs(err) < 0.08 for err in rot_error]) == len(rot_error) else False
       # print(isReachedTrans, isReachedRot)
       if isReachedRot and isReachedTrans:
         print('reached entry pose')
@@ -70,11 +70,11 @@ class DoScan():
     # ---------- landing ----------
     print('landing ...')
     while not rospy.is_shutdown():
-      desired_vel = -0.0032*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
+      desired_vel = -0.0025*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
       # self.vel_msg.linear.y = math.cos(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       # self.vel_msg.linear.z = math.sin(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       self.vel_msg.linear.z = desired_vel
-      self.vel_msg.angular.x = -0.03*self.in_plane_rot_err
+      self.vel_msg.angular.x = -0.020*self.in_plane_rot_err
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
       self.vel_pub.publish(vel_msg_filtered)
@@ -86,11 +86,11 @@ class DoScan():
     self.scan_flag_msg.data = 1
     while not rospy.is_shutdown():
       self.vel_msg.linear.x = self.lin_vel_x
-      desired_vel = -0.0050*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
+      desired_vel = -0.0025*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
       # self.vel_msg.linear.y = math.cos(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       # self.vel_msg.linear.z = math.sin(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       self.vel_msg.linear.z = desired_vel
-      self.vel_msg.angular.x = -0.03*self.in_plane_rot_err
+      self.vel_msg.angular.x = -0.020*self.in_plane_rot_err
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
       self.scan_flag_pub.publish(self.scan_flag_msg)
@@ -132,7 +132,7 @@ class DoScan():
     self.vel_msg.angular.x = 0
     self.vel_msg.angular.y = 0
     self.vel_msg.angular.z = 0
-    for i in range(3000):
+    for i in range(6000):
       self.scan_flag_pub.publish(self.scan_flag_msg)
       self.vel_pub.publish(self.vel_msg)
 
@@ -168,7 +168,7 @@ if __name__ == "__main__":
   y_offset = -(7.8-overlap)*1e-3    # 7.8(BScan width) [mm] - (overlap) [mm]
   # scan.T_O_tar[0, -1] = scan.T_O_tar[0, -1]
   scan.T_O_tar[1, -1] += 1*y_offset
-  scan.T_O_tar[2, -1] = 0.18
+  scan.T_O_tar[2, -1] = 0.17
   scan.scan_dist = 0.040
   # ===== go to entry pose =====
   scan.go_to_entry()

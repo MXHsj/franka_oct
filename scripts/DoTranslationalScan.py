@@ -69,7 +69,7 @@ class DoTranslationalScan():
     # ---------- landing ----------
     print('landing ...')
     while not rospy.is_shutdown():
-      self.vel_msg.linear.z = -0.0035*(0.7-self.surf_height_ratio)
+      self.vel_msg.linear.z = -0.0025*(0.7-self.surf_height_ratio)
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
       self.vel_pub.publish(vel_msg_filtered)
@@ -81,7 +81,7 @@ class DoTranslationalScan():
     self.scan_flag_msg.data = 1
     while not rospy.is_shutdown():
       self.vel_msg.linear.x = self.lin_vel_x
-      self.vel_msg.linear.z = -0.0035*(0.7-self.surf_height_ratio)
+      self.vel_msg.linear.z = -0.0025*(0.7-self.surf_height_ratio)
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
       self.scan_flag_pub.publish(self.scan_flag_msg)
@@ -122,7 +122,7 @@ class DoTranslationalScan():
     self.vel_msg.angular.x = 0
     self.vel_msg.angular.y = 0
     self.vel_msg.angular.z = 0
-    for i in range(3000):
+    for i in range(6000):
       self.scan_flag_pub.publish(self.scan_flag_msg)
       self.vel_pub.publish(self.vel_msg)
 

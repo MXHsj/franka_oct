@@ -41,7 +41,7 @@ for scan in range(len(scan_starts)):
   # define entry
   scan_process.T_O_tar[0, -1] = scan_starts[scan][0] - scan_length
   scan_process.T_O_tar[1, -1] = scan_starts[scan][1]
-  scan_process.T_O_tar[2, -1] = 0.18  # scan_starts[scan][2]
+  scan_process.T_O_tar[2, -1] = 0.14  # scan_starts[scan][2]
   print('next start: x, y, z [m]',
         scan_process.T_O_tar[0, -1], scan_process.T_O_tar[1, -1], scan_process.T_O_tar[2, -1])
   # go to entry

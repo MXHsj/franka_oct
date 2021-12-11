@@ -16,7 +16,7 @@ class pub_franka_state():
   def __init__(self, pub_rate=800):
     rospy.init_node('publish_franka_state', anonymous=True)
     rospy.Subscriber('franka_state_controller/franka_states', FrankaState, self.ee_callback)
-    self.franka_state_pub = rospy.Publisher('franka_state_custom', Float64MultiArray, queue_size=3)
+    self.franka_state_pub = rospy.Publisher('franka_state_custom', Float64MultiArray, queue_size=1)
     self.rate = rospy.Rate(pub_rate)
     print("publishing franka state ...")
     while not rospy.is_shutdown():
