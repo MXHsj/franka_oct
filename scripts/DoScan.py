@@ -12,6 +12,7 @@ from geometry_msgs.msg import Twist
 
 
 class DoScan():
+  pureTranslation = False
   T_O_ee = None
   in_plane_rot_err = None
   surf_height_ratio = None        # target surface height
@@ -41,9 +42,10 @@ class DoScan():
                   [0.0, -1.0, 0.0, 0.00],
                   [0.0, 0.0, -1.0, 0.20],
                   [0.0, 0.0, 0.0, 1.0]])
-    self.rate = rospy.Rate(800)
+    self.rate = rospy.Rate(1000)
     self.scan_dist = 0.040        # [m] scan distance
     self.lin_vel_x = 0.00060      # [m/s] scan velocity +x direction
+    self.surf_height_d = 0.70      # desired surface height ratio
     print("connecting to OCT desktop ...")
     while self.T_O_ee is None or self.surf_height_ratio is None:
       if rospy.is_shutdown():
@@ -58,7 +60,7 @@ class DoScan():
       trans_error = T_error[0:3, 3]
       rot_error = T_error[0:3, 0:3].flatten()
       isReachedTrans = True if sum([abs(err) < 0.0018 for err in trans_error]) == len(trans_error) else False
-      isReachedRot = True if sum([abs(err) < 0.08 for err in rot_error]) == len(rot_error) else False
+      isReachedRot = True if sum([abs(err) < 0.03 for err in rot_error]) == len(rot_error) else False
       # print(isReachedTrans, isReachedRot)
       if isReachedRot and isReachedTrans:
         print('reached entry pose')
@@ -70,36 +72,43 @@ class DoScan():
     # ---------- landing ----------
     print('landing ...')
     while not rospy.is_shutdown():
-      desired_vel = -0.0025*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
+      # linear velocity along approach vector
       # self.vel_msg.linear.y = math.cos(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       # self.vel_msg.linear.z = math.sin(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
-      self.vel_msg.linear.z = desired_vel
-      self.vel_msg.angular.x = -0.020*self.in_plane_rot_err
+      self.vel_msg.linear.z = -0.0016*np.tanh([self.surf_height_d-self.surf_height_ratio])
+      if not self.pureTranslation:
+        self.vel_msg.angular.x = -0.020*np.tanh([self.in_plane_rot_err])
+        # pass
       vel_msg_filtered = self.IIR_filter()
-      self.vel_msg_last = vel_msg_filtered
       self.vel_pub.publish(vel_msg_filtered)
-      if self.surf_height_ratio > 0.7 and abs(self.in_plane_rot_err) < 0.05:
-        break
+      self.vel_msg_last = vel_msg_filtered
+      if self.pureTranslation:
+        if self.surf_height_ratio > self.surf_height_d:
+          break
+      else:
+        if self.surf_height_ratio > self.surf_height_d and abs(self.in_plane_rot_err) < 0.05:
+          break
       self.rate.sleep()
     # ---------- scan ----------
     print('scanning ...')
     self.scan_flag_msg.data = 1
     while not rospy.is_shutdown():
       self.vel_msg.linear.x = self.lin_vel_x
-      desired_vel = -0.0025*(0.7-self.surf_height_ratio)  # linear velocity along approach vector
+      # linear velocity along approach vector
       # self.vel_msg.linear.y = math.cos(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
       # self.vel_msg.linear.z = math.sin(math.atan2(self.T_O_ee[2, -1], self.T_O_ee[1, -1]))*desired_vel
-      self.vel_msg.linear.z = desired_vel
-      self.vel_msg.angular.x = -0.020*self.in_plane_rot_err
+      self.vel_msg.linear.z = -0.0030*np.tanh([self.surf_height_d-self.surf_height_ratio])
+      if not self.pureTranslation:
+        self.vel_msg.angular.x = -0.020*np.tanh([self.in_plane_rot_err])
+        # pass
       vel_msg_filtered = self.IIR_filter()
       self.vel_msg_last = vel_msg_filtered
-      self.scan_flag_pub.publish(self.scan_flag_msg)
       self.vel_pub.publish(vel_msg_filtered)
+      self.scan_flag_pub.publish(self.scan_flag_msg)
       if self.T_O_ee[0, 3] >= self.T_O_tar[0, 3] + self.scan_dist:  # scan along x direction
         break
       self.rate.sleep()
     # ---------- let OCT desktop save data & clean up ----------
-    # TODO: send signal to OCT desktop for data saving
     self.finish()
     print('finish scan, waiting for remote data to be saved ...')
     while not rospy.is_shutdown():
@@ -140,7 +149,7 @@ class DoScan():
     """
     apply IIR filter on velocity commands
     """
-    p = 0.125
+    p = 0.0667
     filtered = Twist()
     filtered.linear.x = self.vel_msg.linear.x
     filtered.linear.y = p*self.vel_msg.linear.y + (1-p)*self.vel_msg_last.linear.y
