@@ -12,7 +12,6 @@ from geometry_msgs.msg import Twist
 
 
 class DoScan():
-  pureTranslation = False
   T_O_ee = None
   in_plane_rot_err = None
   surf_height_ratio = None        # target surface height
@@ -29,7 +28,8 @@ class DoScan():
   pos_msg = Float64MultiArray()
   pos_msg.data = [0.0]*12
 
-  def __init__(self):
+  def __init__(self, pureTranslation=False):
+    self.pureTranslation = pureTranslation
     # subscriber & publisher
     rospy.Subscriber("franka_state_controller/franka_states", FrankaState, self.ee_callback)
     rospy.Subscriber('OCT_remote_response', Float64MultiArray, self.OCT_remote_callback)
@@ -171,13 +171,14 @@ class DoScan():
 
 if __name__ == "__main__":
   rospy.init_node('OCT_scan_process', anonymous=True)
-  scan = DoScan()
+  scan = DoScan(pureTranslation=True)
   # ===== define entry pose & scan length =====
-  overlap = 0.0                     # [mm] overlap
+  overlap = 0.1                     # [mm] overlap
+  scan_num = 2
   y_offset = -(7.8-overlap)*1e-3    # 7.8(BScan width) [mm] - (overlap) [mm]
-  # scan.T_O_tar[0, -1] = scan.T_O_tar[0, -1]
-  scan.T_O_tar[1, -1] += 1*y_offset
-  scan.T_O_tar[2, -1] = 0.17
+  # scan.T_O_tar[0, -1] = scan.T_O_tar[0, -1]   # x
+  scan.T_O_tar[1, -1] += scan_num*y_offset      # y
+  scan.T_O_tar[2, -1] = 0.15                    # z
   scan.scan_dist = 0.040
   # ===== go to entry pose =====
   scan.go_to_entry()

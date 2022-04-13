@@ -13,23 +13,23 @@ edge_length = 12
 def get_patch(center):
     # square patch with 9 control points
   col_vec = [center[0],
-             center[0]-edge/2,
-             center[0]-edge/2,
-             center[0]-edge/2,
+             center[0]-edge_length/2,
+             center[0]-edge_length/2,
+             center[0]-edge_length/2,
              center[0],
-             center[0]+edge/2,
-             center[0]+edge/2,
-             center[0]+edge/2,
+             center[0]+edge_length/2,
+             center[0]+edge_length/2,
+             center[0]+edge_length/2,
              center[0]]
   row_vec = [center[1],
-             center[1]+edge/2,
+             center[1]+edge_length/2,
              center[1],
-             center[1]-edge/2,
-             center[1]-edge/2,
-             center[1]-edge/2,
+             center[1]-edge_length/2,
+             center[1]-edge_length/2,
+             center[1]-edge_length/2,
              center[1],
-             center[1]+edge/2,
-             center[1]+edge/2]
+             center[1]+edge_length/2,
+             center[1]+edge_length/2]
   return col_vec, row_vec
 
 
